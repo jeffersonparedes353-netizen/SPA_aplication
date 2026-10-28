@@ -1,0 +1,179 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "▶ Iniciar sistema",
+      "detail": "Enciende backend y frontend y abre la app en el navegador (si ya estaba encendido, lo reinicia)",
+      "dependsOn": [
+        "2. Iniciar backend",
+        "3. Iniciar frontend",
+        "Abrir app en el navegador"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "📱 Iniciar sistema para probar en el celular",
+      "detail": "Como Iniciar sistema, pero visible en tu Wi-Fi: muestra la dirección para abrir en el celular",
+      "dependsOn": [
+        "2. Iniciar backend",
+        "3b. Iniciar frontend (red local)"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Detener sistema",
+      "detail": "Apaga el backend y el frontend",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-Process -Name SpaMR.API -ErrorAction SilentlyContinue | Stop-Process -Force; Get-NetTCPConnection -LocalPort 4200 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Write-Host 'Sistema detenido.'"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "0. Iniciar PostgreSQL",
+      "detail": "Enciende la base de datos (Windows pedirá permiso). Registro: Backend/postgres.log",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\Backend\\iniciar-postgres.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "1. Preparar sistema (compilar y migrar)",
+      "detail": "Compila backend y frontend, crea la migración si hay cambios y actualiza la base de datos. Registro: Backend/preparar.log",
+      "type": "process",
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/c",
+        "${workspaceFolder}\\Backend\\preparar.bat",
+        "--sin-pausa"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "2. Iniciar backend",
+      "detail": "API en http://localhost:5001. Registro: Backend/backend.log",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-Process -Name SpaMR.API -ErrorAction SilentlyContinue | Stop-Process -Force; dotnet run --project '${workspaceFolder}\\Backend\\src\\SpaMR.API' 2>&1 | Tee-Object -FilePath '${workspaceFolder}\\Backend\\backend.log'"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "3. Iniciar frontend",
+      "detail": "App en http://localhost:4200. Registro: Fronend/frontend.log",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-NetTCPConnection -LocalPort 4200 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; npx ng serve 2>&1 | Tee-Object -FilePath '${workspaceFolder}\\Fronend\\frontend.log'"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\Fronend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Abrir app en el navegador",
+      "detail": "Espera a que el sistema esté listo y abre http://localhost:4200",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "for ($i = 0; $i -lt 90; $i++) { try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://localhost:4200/api/publico/horario | Out-Null; Start-Process 'http://localhost:4200'; Write-Host 'Sistema listo: http://localhost:4200  (administración: http://localhost:4200/admin)'; exit 0 } catch { Start-Sleep -Seconds 2 } }; Write-Host 'El sistema no respondió en 3 minutos. Revisa las terminales del backend y el frontend.'; exit 1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Diagnóstico PostgreSQL",
+      "detail": "Muestra en qué puerto escucha la base de datos. Registro: Backend/postgres.log",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\Backend\\diagnostico-postgres.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "3b. Iniciar frontend (red local)",
+      "detail": "Frontend visible en el Wi-Fi para el celular",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\Fronend\\iniciar-red-local.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\Fronend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}
